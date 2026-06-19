@@ -1,0 +1,19 @@
+[project]
+name = "codetodoc"
+version = "0.1.0"
+description = "Automatyczny analizator kodu do generowania dokumentacji technicznej"
+authors = [
+    {name = "Daniel-Wiech",email = "daniel.wiech1@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "gitpython (>=3.1.50,<4.0.0)"
+]
+
+[tool.poetry]
+packages = [{include = "src"}]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

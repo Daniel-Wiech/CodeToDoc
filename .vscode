@@ -1,0 +1,12 @@
+{
+    "git.ignoredRepositories": [
+        "temp_repos"
+    ],
+    "files.exclude": {
+        "**/temp_repos": true
+    },
+    "search.exclude": {
+        "**/temp_repos": true
+    },
+    "git.repositoryScanMaxDepth": 0
+}
