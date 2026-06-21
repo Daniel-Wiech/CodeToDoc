@@ -5,7 +5,7 @@ from code_analyzer import CodeAnalyzer
 from doc_generator import DocGenerator
 import argparse
 import sys
-
+import os
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -30,10 +30,15 @@ def parse_args():
         default=None,
         help="Ścieżka wynikowego pliku .md (domyślnie: obok skryptu)",
     )
+    parser.add_argument(
+    "--token",
+    default=None,
+    help="Token GitHub dla prywatnych repozytoriów (lub ustaw GITHUB_TOKEN w env)",
+    )
     return parser.parse_args()
 
 
-def resolve_repo(source: str, temp_dir: Path, git_mgr: GitManager) -> tuple[Path, str]:
+def resolve_repo(source: str, temp_dir: Path, git_mgr: GitManager, token: str | None = None) -> tuple[Path, str]:
     """
     Zwraca (repo_path, repo_name).
     Jeśli source to URL – klonuje. Jeśli ścieżka lokalna – używa jej bezpośrednio.
@@ -43,7 +48,7 @@ def resolve_repo(source: str, temp_dir: Path, git_mgr: GitManager) -> tuple[Path
     if is_url:
         repo_name = Path(source.rstrip("/")).stem  # obcina .git jeśli jest
         print(f"Tryb GitHub – klonowanie: {source}")
-        repo_path = git_mgr.clone_repository(source, repo_name)
+        repo_path = git_mgr.clone_repository(source, repo_name, token=token)
     else:
         local_path = Path(source).resolve()
         if not local_path.exists():
@@ -64,11 +69,11 @@ def main():
 
     base_dir = Path(__file__).resolve().parents[1]
     temp_dir = base_dir / "temp_repos"
-
+    token = args.token or os.environ.get("GITHUB_TOKEN")
     git_mgr = GitManager(temp_dir=temp_dir)
     doc_gen = DocGenerator(model_name=args.model)
 
-    repo_path, repo_name = resolve_repo(args.source, temp_dir, git_mgr)
+    repo_path, repo_name = resolve_repo(args.source, temp_dir, git_mgr, token=token)
 
     output_doc_path = Path(args.output) if args.output else base_dir / f"{repo_name}_documentation.md"
 

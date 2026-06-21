@@ -14,18 +14,21 @@ class GitManager:
         os.chmod(path, stat.S_IWRITE)
         func(path)
 
-    def clone_repository(self, repo_url: str, repo_name: str) -> Path:
-        """Klonuje repozytorium Git do folderu tymczasowego."""
+# git_manager.py - clone_repository przyjmuje token
+    def clone_repository(self, repo_url: str, repo_name: str, token: str | None = None) -> Path:
         target_path = self.temp_dir / repo_name
-        
+
         if target_path.exists():
             print(f"Folder {target_path} istnieje. Usuwanie starej wersji...")
-            # Używamy onexc (lub onerror w starszych wersjach Pythona), 
-            # aby w razie braku dostępu Windows zdjął blokadę read-only
             shutil.rmtree(target_path, onerror=self._remove_readonly)
-            
-        print(f"Klonowanie repozytorium: {repo_url}...")
-        Repo.clone_from(repo_url, target_path)
+
+        # Wstrzykujemy token do URL: https://TOKEN@github.com/user/repo
+        clone_url = repo_url
+        if token and repo_url.startswith("https://"):
+            clone_url = repo_url.replace("https://", f"https://{token}@")
+
+        print(f"Klonowanie repozytorium: {repo_url}...")  # logujemy oryginalny URL bez tokena
+        Repo.clone_from(clone_url, target_path)
         print("Klonowanie zakończone sukcesem.")
         return target_path
 
