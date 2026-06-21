@@ -150,7 +150,7 @@ Wygeneruj TYLKO sekcję:
 - Opisz krok po kroku sekwencję działania programu (Krok 1, Krok 2...).
 - Wygeneruj diagram w bloku ```mermaid``` (sequenceDiagram lub flowchart TD).
 
-⚠️ REGUŁY MERMAID:
+REGUŁY MERMAID:
 - Używaj wyłącznie strzałek `NodeA -->|Opis| NodeB`.
 - Zakaz `>` bezpośrednio po `|`.
 - Grupuj warstwy logiczne w `subgraph`.

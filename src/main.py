@@ -6,7 +6,7 @@ from src.doc_generator import DocGenerator
 
 def main():
     REPO_URL = "https://github.com/Daniel-Wiech/MCPNorthwind"
-    REPO_NAME = "test_project"
+    REPO_NAME = Path(REPO_URL.rstrip("/")).stem
     MODEL_NAME = "llama3"  # Jeśli pobrałeś inny model, wpisz tutaj jego nazwę (np. qwen2.5:7b)
 
     base_dir = Path(__file__).resolve().parents[1]
