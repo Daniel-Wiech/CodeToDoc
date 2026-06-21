@@ -1,5 +1,6 @@
 import ollama
 from pathlib import Path
+import re
 
 
 class DocGenerator:
@@ -7,6 +8,61 @@ class DocGenerator:
         self.model_name = model_name
         self.project_context: dict = {}  # ustawiane przez set_context()
 
+    def _fix_mermaid(self, text: str) -> str:
+        """
+        Naprawia typowe błędy składni Mermaid generowane przez małe modele.
+        Wywoływana na wyjściu każdego rozdziału przed zapisem.
+        """
+        def fix_block(match: re.Match) -> str:
+            lang = match.group(1)  # "mermaid"
+            code = match.group(2)
+
+            # 1. Etykiety strzałek w cudzysłowach: -->|"tekst"| → -->|tekst|
+            code = re.sub(r'-->\|"([^"]+)"\|', r'-->|\1|', code)
+
+            # 2. Węzły z cudzysłowami po strzałce: -->|opis|"Węzeł" → -->|opis| Węzeł
+            code = re.sub(r'-->\|([^|]+)\|"([^"]+)"', r'-->|\1| \2', code)
+
+            # 3. Participant as "Nazwa" → participant as Nazwa (sequenceDiagram)
+            code = re.sub(r'(participant\s+\w+\s+as\s+)"([^"]+)"', r'\1\2', code)
+
+            # 4. note "tekst" → Note over pierwszyAktor: tekst
+            #    Wyciągamy pierwszego aktora z diagramu i używamy go jako fallback
+            actors = re.findall(r'participant\s+(\w+)', code)
+            fallback_actor = actors[0] if actors else "System"
+            code = re.sub(
+                r'note\s+"([^"]+)"',
+                lambda m: f"Note over {fallback_actor}: {m.group(1)}",
+                code,
+                flags=re.IGNORECASE,
+            )
+
+            # 5. Puste węzły / linie kończące się strzałką bez celu: NodeA -->
+            code = re.sub(r'-->\s*$', '', code, flags=re.MULTILINE)
+
+            # 6. Węzły z nawiasami kwadratowymi zawierającymi cudzysłowy:
+            #    Node["tekst"] → Node[tekst]
+            code = re.sub(r'(\w+)\["([^"]+)"\]', r'\1[\2]', code)
+
+            # 7. Znaki specjalne w etykietach strzałek (np. &, <, >)
+            def sanitize_arrow_label(m: re.Match) -> str:
+                label = m.group(1)
+                label = label.replace("&", "and").replace("<", "").replace(">", "")
+                return f"-->|{label}|"
+            code = re.sub(r'-->\|([^|]+)\|', sanitize_arrow_label, code)
+
+            # 8. Puste subgraphy (subgraph bez żadnej zawartości przed end)
+            code = re.sub(r'subgraph\s+[^\n]+\n\s*end', '', code)
+
+            return f"```{lang}\n{code}\n```"
+
+    # Aplikuj fix do wszystkich bloków ```mermaid ... ```
+        return re.sub(
+            r'```(mermaid)\n(.*?)```',
+            fix_block,
+            text,
+            flags=re.DOTALL,
+        )
     def set_context(
         self,
         file_tree: str,
@@ -185,10 +241,11 @@ REGUŁY MERMAID:
             ("7. Przepływ działania", self.generate_chapter_7()),
         ]
 
-        parts = ["# 📘 Dokumentacja Techniczna Projektu\n"]
+        parts = ["# Dokumentacja Techniczna Projektu\n"]
         for label, content in chapters:
-            print(f"  ✅ Wygenerowano: {label}")
-            parts.append(content)
+            fixed = self._fix_mermaid(content)  # ← fix po każdym rozdziale
+            print(f"  Wygenerowano: {label}")
+            parts.append(fixed)
 
         return "\n\n---\n\n".join(parts)
 
@@ -247,11 +304,11 @@ REGUŁY MERMAID:
             )
             return response["message"]["content"]
         except Exception as e:
-            return f"❌ Błąd podczas generowania ({context}): {e}"
+            return f"Błąd podczas generowania ({context}): {e}"
 
     def save_to_file(self, content: str, output_path: Path) -> None:
         try:
             output_path.write_text(content, encoding="utf-8")
-            print(f"💾 Dokumentacja zapisana: {output_path.resolve()}")
+            print(f"Dokumentacja zapisana: {output_path.resolve()}")
         except Exception as e:
-            print(f"❌ Błąd zapisu: {e}")
+            print(f"Błąd zapisu: {e}")
